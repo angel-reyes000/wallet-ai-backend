@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from sqlalchemy import text
@@ -7,6 +7,7 @@ import bcrypt
 import jwt
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timedelta, timezone
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 
@@ -58,7 +59,7 @@ def postUser(user: User, db: Session = Depends(get_db)):
                    RETURNING *
                 """
 
-        hashed_password = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
 
         values = {"username": user.username, "email": user.email, "password": hashed_password}
 
@@ -68,10 +69,85 @@ def postUser(user: User, db: Session = Depends(get_db)):
         data = response.mappings().first()
         #print(data)
 
-        token = jwt.encode(dict(data), JWT_SECRET, algorithm="HS256")
-
-        return [token, data]
+        return {}
 
     except Exception as e:
         print(f"Error in postUsers: {str(e)}")
         return {"message": "Error at create account."}
+
+def authUser (authorization: str = Header()):
+    try:
+
+        token = authorization.removeprefix("Bearer ")
+
+        if not token: 
+            return {"message": "Access denegade: Invalid token"}
+
+        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+
+    except jwt.ExpiredSignatureError:
+        print("Invalid token, sesison expired.")
+        return False
+        #{"message": "Session expired"}
+
+    except Exception as e:
+        print(f"Error in authUsers: {str(e)}")
+        return False
+        #{"message": "Error in authUsers."}
+
+@routerUsers.get("/getDataUser")
+def getDataUser(dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try:
+
+        if not dataUser:
+            return {"message": "Sesion expired."}
+
+        #print("KAKAKA", dataUser)
+        #query = "SELECT id FROM users WHERE id = :id"
+        #value = {"id": dataUser["id"]}
+        #response = db.execute(text(query), value)
+        #data = response.mappings().first()
+
+        return {"valid session": True}
+
+    except Exception as e:
+        print(f"Error in getDataUsers: {str(e)}")
+        return {"message": "Error to get data"}
+
+@routerUsers.post('/verifyUser')
+def verifyUser (user: User, db: Session = Depends(get_db)):
+    try:
+
+        if not user.email or not user.password:
+            return {"message": "Invalid data."}
+
+        query = "SELECT * FROM users WHERE email = :email"
+
+        value = {"email": user.email}
+
+        response = db.execute(text(query), value)
+
+        data = response.mappings().all()
+        print(data[0])
+
+        if len(data) <= 0:
+            return {"message": "User not exist."}
+
+        dataUser = data[0]
+
+        checkPassword = bcrypt.checkpw(user.password.encode(), dataUser["password"].encode())
+
+        if not checkPassword:
+            return {"message": "Invalid password."}
+
+        payload = dict(dataUser)
+        payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1) 
+
+        token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+        print(token)
+
+        return token
+
+    except Exception as e:
+        print(f"Error in verifyUsers: {str(e)}")
+        return {"message": "Error to auth."}
