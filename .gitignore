@@ -1,0 +1,71 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ===== Entornos virtuales =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Variables de entorno y secretos =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ===== Bases de datos locales =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Build / empaquetado =====
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+wheels/
+
+# ===== Tests / cobertura / linters =====
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Archivos subidos / temporales =====
+uploads/
+tmp/
+temp/
+
+# ===== Docker (overrides locales) =====
+docker-compose.override.yml
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Editores =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== Sistema operativo =====
+.DS_Store
+Thumbs.db
+Desktop.ini
