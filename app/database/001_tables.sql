@@ -1,0 +1,27 @@
+CREATE TABLE users (
+	id SERIAL PRIMARY KEY,
+	username VARCHAR(100) NOT NULL,
+	email VARCHAR(100) NOT NULL,
+	password TEXT NOT NULL
+);
+
+CREATE TABLE transactions (
+	id SERIAL PRIMARY KEY,
+	date DATE NOT NULL,
+	description TEXT NOT NULL,
+	category VARCHAR(30) NOT NULL,
+	type VARCHAR(30) NOT NULL,
+	amount DECIMAL(9, 2) NOT NULL,
+	user_id INTEGER NOT NULL,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE types (
+	id SERIAL PRIMARY KEY,
+	type_name VARCHAR(30) NOT NULL
+);
+
+CREATE TABLE categories (
+	id SERIAL PRIMARY KEY,
+	category_name VARCHAR(30) NOT NULL
+);
