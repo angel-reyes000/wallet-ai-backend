@@ -25,6 +25,7 @@ def get_db ():
 
     except Exception as e:
         print(f"Error in get_db: {str(e)}")
+        raise
 
     finally:
         get_session.close()

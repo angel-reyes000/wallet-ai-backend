@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from sqlalchemy import text
@@ -100,19 +100,22 @@ def getDataUser(dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
 
         if not dataUser:
-            return {"message": "Sesion expired."}
+            raise HTTPException(status_code=400, detail="Session expired.")
 
-        #print("KAKAKA", dataUser)
-        #query = "SELECT id FROM users WHERE id = :id"
-        #value = {"id": dataUser["id"]}
-        #response = db.execute(text(query), value)
-        #data = response.mappings().first()
+        query = "SELECT username, email FROM users WHERE id = :id"
 
-        return {"valid session": True}
+        value = {"id": dataUser["id"]}
+
+        response = db.execute(text(query), value)
+
+        data = response.mappings().first()
+
+        return data
 
     except Exception as e:
         print(f"Error in getDataUsers: {str(e)}")
-        return {"message": "Error to get data"}
+        #return {"message": "Error to get data"}
+        raise HTTPException(status_code=400, detail="Error to get data.")
 
 @routerUsers.post('/verifyUser')
 def verifyUser (user: User, db: Session = Depends(get_db)):
