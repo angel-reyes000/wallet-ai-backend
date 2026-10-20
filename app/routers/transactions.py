@@ -23,7 +23,7 @@ def getTransactions (dataUser = Depends(authUser), db: Session = Depends(get_db)
         response = db.execute(text(query), value)
 
         data = response.mappings().all()
-        print(data)
+        #print(data)
 
         return data
 
@@ -69,3 +69,62 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
     except Exception as e:
         print("Error in postTransactions: ", str(e))
         raise HTTPException(status_code=400, detail="Error to create transaction.")
+
+@routerTransactions.put("/updateTransaction")
+def updateTransaction(transaction: Transaction, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try:
+
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error to update data.")
+
+        query = """
+            UPDATE transactions 
+            SET date = :date, description = :description, category = :category, type = :type, amount = :amount
+            WHERE id = :id 
+            RETURNING *;
+        """
+
+        values = {            
+            "date": transaction.date,
+            "description": transaction.description,
+            "category": transaction.category,
+            "type": transaction.type,
+            "amount": transaction.amount,
+            "id": transaction.id,
+        }
+
+        response = db.execute(text(query), values)
+        db.commit()
+
+        data = response.mappings().first()
+        #print("UPDATE DATA: ", data)
+
+        return data
+
+    except Exception as e:
+        print("Error in updateTransactions: ", str(e))
+        raise HTTPException(status_code=400, detail="Error to update transaction.")
+    
+@routerTransactions.delete("/deleteTransaction")
+def deleteTransaction (transaction_id: int, db: Session = Depends(get_db)):
+    try:
+
+        query = """
+            DELETE FROM transactions 
+            WHERE id = :id
+            RETURNING *;
+        """
+
+        value = {"id": transaction_id}
+
+        response = db.execute(text(query), value)
+        db.commit()
+
+        data = response.mappings().first()
+        #print(data)
+
+        return data
+
+    except Exception as e:
+        print("Error in deleteTransactions: ", str(e))
+        raise HTTPException(status_code=400, detail="Error to delete transaction.")

@@ -7,9 +7,9 @@ class User (BaseModel):
     password: str
 
 class Transaction (BaseModel):
+    id: Optional[int]
     date: str
     description: str
     category: str
     type: str
     amount: float
-    
