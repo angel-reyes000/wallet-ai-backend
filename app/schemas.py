@@ -7,7 +7,7 @@ class User (BaseModel):
     password: str
 
 class Transaction (BaseModel):
-    id: Optional[int]
+    id: Optional[int] = None
     date: str
     description: str
     category: str
