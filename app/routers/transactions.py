@@ -4,8 +4,174 @@ from app.database.db import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.schemas import Transaction
+import calendar
+from datetime import datetime
 
 routerTransactions = APIRouter(prefix="/transactions", tags=["transaction"])
+
+@routerTransactions.get("/getGraphicTransactions")
+def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try: 
+
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error to get data user.")
+
+        user_id = dataUser["id"]
+
+        query = ""
+        values = {}
+        dataLabelX = None
+        typeFilter = ""
+        if (len(month) > 0 and len(year) > 0):
+            query = """
+                SELECT EXTRACT(DAY FROM date) AS day, SUM(amount) AS total FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(MONTH FROM date) = :month AND EXTRACT(YEAR FROM date) = :year
+                GROUP BY EXTRACT(DAY FROM date);
+            """
+            values = {"user_id": user_id, "year": year, "month": month}
+            dataLabelX = list(range(1, calendar.monthrange(int(year), int(month))[1] + 1))
+            typeFilter = "month_year"
+        elif (len(year) > 0):
+            query = """
+                SELECT TO_CHAR(date, 'month') AS month, SUM(amount) AS total FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year
+                GROUP BY TO_CHAR(date, 'month');
+            """
+            values = {"user_id": user_id, "year": year}
+            dataLabelX = list(calendar.month_name)[1:]
+            typeFilter = "year"
+        elif (len(month) > 0):
+            # query = """
+            #     SELECT * FROM transactions
+            #     WHERE user_id = :user_id AND EXTRACT(MONTH FROM date) = :month
+            # """
+            # values = {"user_id": user_id, "month": month}
+            raise HTTPException(status_code=400, detail="Can not filter only to month.")
+        else:
+            query = """
+                SELECT EXTRACT(YEAR FROM date) AS year, SUM(amount) AS total FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date)::INTEGER BETWEEN EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER - 10 AND EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER
+                GROUP BY EXTRACT(YEAR FROM date)
+            """
+            values = {"user_id": user_id}
+            dataLabelX = [x for x in range(datetime.now().year - 9, datetime.now().year + 1 )]
+
+        response = db.execute(text(query), values)
+
+        data = response.mappings().all()
+
+        listDataValues = [] 
+
+        if typeFilter == "month_year":
+            print("month_year")
+            for v in dataLabelX:
+                valuePass = False
+                for d in data:
+                    if d["day"] == v:
+                        print("TOTAL", d["day"], v)
+                        listDataValues.append(float(d["total"]))
+                        valuePass = True
+                if valuePass:
+                    continue
+                else:
+                    listDataValues.append(0)
+        elif typeFilter == "year":
+            for v in dataLabelX:
+                valuePass = False
+                for d in data:          
+                    if d["month"].lower().strip() == v.lower().strip():
+                        listDataValues.append(int(d["total"]))
+                        valuePass = True
+                if valuePass:
+                    continue
+                else:
+                    listDataValues.append(0)
+        else:
+            print("ETBTRS ALL")
+            print("CWEFEWf: ", dataLabelX)
+            for v in dataLabelX:
+                valuePass = False
+                print("VVV: ", v)
+                for d in data:   
+                    print("DDD: ", d)       
+                    if int(d["year"]) == int(v):
+                        listDataValues.append(float(d["total"]))
+                        valuePass = True
+                if valuePass:
+                    continue
+                else:
+                    listDataValues.append(0)
+                    
+        print("LIST DATA:", listDataValues)
+        print(dataLabelX)
+
+        print(data)
+
+        return [listDataValues, dataLabelX]
+
+    except Exception as e:
+        print("Error in getGraphicTransactions: ", str(e))
+        return HTTPException(status_code=400, detail="Error to get filters.")
+
+@routerTransactions.get("/getTotalBalancesExpensesIncomes")
+def getTotalBalancesExpensesIncomes(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try:
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error to get data user.")
+
+        user_id = dataUser["id"]
+        
+        query = ""
+        if (len(month) > 0 and len(year) > 0):
+            query = """
+                SELECT SUM(amount) as total_balance, 
+                    (SELECT SUM(amount) FROM transactions 
+                        WHERE user_id = :user_id AND amount > 0 AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month) AS total_incomes,
+                    (SELECT SUM(amount) FROM transactions 
+                        WHERE user_id = :user_id AND amount < 0 AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month) AS total_expenses
+                FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month;
+            """
+            values = {"user_id": user_id, "year": year, "month": month}
+        elif (len(year) > 0):
+            query = """
+                SELECT SUM(amount) as total_balance, 
+                    (SELECT SUM(amount) FROM transactions 
+                        WHERE user_id = :user_id AND amount > 0 AND EXTRACT(YEAR FROM date) = :year) AS total_incomes,
+                    (SELECT SUM(amount) FROM transactions 
+                        WHERE user_id = :user_id AND amount < 0 AND EXTRACT(YEAR FROM date) = :year) AS total_expenses
+                FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year;
+            """
+            values = {"user_id": user_id, "year": year}
+        elif (len(month) > 0):
+            # query = """
+            #     SELECT * FROM transactions
+            #     WHERE user_id = :user_id AND EXTRACT(MONTH FROM date) = :month
+            # """
+            # values = {"user_id": user_id, "month": month}
+            raise HTTPException(status_code=400, detail="Can not filter only to month.")
+        else:
+            query = """
+                SELECT SUM(amount) as total_balance, 
+                    (SELECT SUM(amount) FROM transactions WHERE user_id = :user_id AND amount > 0) AS total_incomes,
+                    (SELECT SUM(amount) FROM transactions WHERE user_id = :user_id AND amount < 0) AS total_expenses
+                FROM transactions
+                WHERE user_id = :user_id;
+            """
+            values = {"user_id": user_id}
+
+        response = db.execute(text(query), values)
+
+        data = response.mappings().first()
+
+        print(data)
+
+        return data
+        
+    except Exception as e:
+        print("Error in getTotalBalancesExpensesIncomes: ", str(e))
+        return HTTPException(status_code=400, detail="Error to get filters.")
 
 @routerTransactions.get("/getTransactions")
 def getTransactions (dataUser = Depends(authUser), db: Session = Depends(get_db)):
