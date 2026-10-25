@@ -41,11 +41,6 @@ def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depen
             dataLabelX = list(calendar.month_name)[1:]
             typeFilter = "year"
         elif (len(month) > 0):
-            # query = """
-            #     SELECT * FROM transactions
-            #     WHERE user_id = :user_id AND EXTRACT(MONTH FROM date) = :month
-            # """
-            # values = {"user_id": user_id, "month": month}
             raise HTTPException(status_code=400, detail="Can not filter only to month.")
         else:
             query = """
@@ -63,7 +58,6 @@ def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depen
         listDataValues = [] 
 
         if typeFilter == "month_year":
-            print("month_year")
             for v in dataLabelX:
                 valuePass = False
                 for d in data:
@@ -87,13 +81,9 @@ def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depen
                 else:
                     listDataValues.append(0)
         else:
-            print("ETBTRS ALL")
-            print("CWEFEWf: ", dataLabelX)
             for v in dataLabelX:
                 valuePass = False
-                print("VVV: ", v)
                 for d in data:   
-                    print("DDD: ", d)       
                     if int(d["year"]) == int(v):
                         listDataValues.append(float(d["total"]))
                         valuePass = True
@@ -102,10 +92,10 @@ def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depen
                 else:
                     listDataValues.append(0)
                     
-        print("LIST DATA:", listDataValues)
-        print(dataLabelX)
+        # print("LIST DATA:", listDataValues)
+        # print(dataLabelX)
 
-        print(data)
+        # print(data)
 
         return [listDataValues, dataLabelX]
 
@@ -171,6 +161,52 @@ def getTotalBalancesExpensesIncomes(month: str = None, year: str = None, dataUse
         
     except Exception as e:
         print("Error in getTotalBalancesExpensesIncomes: ", str(e))
+        return HTTPException(status_code=400, detail="Error to get filters.")
+
+@routerTransactions.get("/getLastTransactions")
+def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try: 
+
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error to get data user.")
+
+        user_id = dataUser["id"]
+
+        query = ""
+        values = {}
+        if (len(month) > 0 and len(year) > 0):
+            query = """
+                SELECT id, category, type, amount FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month
+                ORDER BY date ASC LIMIT 10;
+            """
+            values = {"user_id": user_id, "year": year, "month": month}
+        elif (len(year) > 0):
+            query = """
+                SELECT id, category, type, amount FROM transactions
+                WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year
+                ORDER BY date ASC LIMIT 10;
+            """
+            values = {"user_id": user_id, "year": year}
+        elif (len(month) > 0):
+            raise HTTPException(status_code=400, detail="Can not filter only to month.")
+        else:
+            query = """
+                SELECT id, category, type, amount FROM transactions
+                WHERE user_id = :user_id
+                ORDER BY date ASC LIMIT 10;
+            """
+            values = {"user_id": user_id}
+
+        response = db.execute(text(query), values)
+
+        data = response.mappings().all()
+        #print(data)
+
+        return data
+
+    except Exception as e:
+        print("Error in getGraphicTransactions: ", str(e))
         return HTTPException(status_code=400, detail="Error to get filters.")
 
 @routerTransactions.get("/getTransactions")
