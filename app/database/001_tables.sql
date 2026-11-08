@@ -2,7 +2,8 @@ CREATE TABLE users (
 	id SERIAL PRIMARY KEY,
 	username VARCHAR(100) NOT NULL,
 	email VARCHAR(100) NOT NULL,
-	password TEXT NOT NULL
+	password TEXT NOT NULL,
+	created_at DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
 CREATE TABLE transactions (

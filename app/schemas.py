@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 class User (BaseModel):
@@ -13,3 +13,13 @@ class Transaction (BaseModel):
     category: str
     type: str
     amount: float
+
+class Message (BaseModel):
+    role: Optional[str] = None
+    message: str
+
+class AgentReply (BaseModel):
+    id: int = Field(descrition="Continue with the serial numbers or make the random number.")
+    role: str = "ai"
+    message: str = Field(description="Only contain your answer.")
+    
