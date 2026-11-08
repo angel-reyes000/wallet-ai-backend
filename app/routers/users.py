@@ -8,6 +8,7 @@ import jwt
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta, timezone
+from fastapi.encoders import jsonable_encoder
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 
@@ -102,7 +103,7 @@ def getDataUser(dataUser = Depends(authUser), db: Session = Depends(get_db)):
         if not dataUser:
             raise HTTPException(status_code=400, detail="Session expired.")
 
-        query = "SELECT username, email FROM users WHERE id = :id"
+        query = "SELECT username, email, created_at FROM users WHERE id = :id"
 
         value = {"id": dataUser["id"]}
 
@@ -131,19 +132,21 @@ def verifyUser (user: User, db: Session = Depends(get_db)):
         response = db.execute(text(query), value)
 
         data = response.mappings().all()
-        print(data[0])
 
         if len(data) <= 0:
             return {"message": "User not exist."}
 
-        dataUser = data[0]
+        dataUser = dict(data[0])
 
         checkPassword = bcrypt.checkpw(user.password.encode(), dataUser["password"].encode())
 
         if not checkPassword:
             return {"message": "Invalid password."}
 
-        payload = dict(dataUser)
+        dataUser.pop("password")
+        dataUser["created_at"] = str(dataUser["created_at"])
+
+        payload = dataUser
         payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1) 
 
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
