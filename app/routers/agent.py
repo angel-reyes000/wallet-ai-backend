@@ -9,6 +9,7 @@ from app.agent.agents import general_agent
 from langgraph_supervisor import create_supervisor
 from app.agent.agentConfig import model, temperature
 from app.vectorestore.chromaDB import vectorstore
+from app.agent.prompts import promptSupervisorAgent
 from uuid import uuid4
 from dotenv import load_dotenv
 import json
@@ -85,23 +86,7 @@ def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session
         agent_supervisor = create_supervisor(
             model=llm,
             agents=[general_agent],
-            prompt="""
-                Choose the best agent to response at the user, always only
-                return the same json schema that return the agent, no more.
-
-                Follow the next rules:
-                    - Always use the tool 'memory_tool' from 'general_agent' to answer.
-                    - Always to response based in the two last messages (ai and user) that return 'memory_tool'.
-                    - Always return the json schema: {"role": "ai", "message": <your answer>}                    
-                    
-                the structure have be the next:
-
-                {
-                    "role": "ai",
-                    "message": <your answer>
-                }
-
-            """,
+            prompt=promptSupervisorAgent,
         )    
 
         compiled_agent = agent_supervisor.compile()
@@ -110,6 +95,9 @@ def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session
 
         response_agent = compiled_agent.invoke({"messages": [{"role": "user", "content": dataMessage.message}]}, config)
         #print("AGENT RESPONSE: ", response_agent["messages"][-1].content)
+
+        for msg in response_agent['messages']:
+            print(msg.content)
 
         final_answer = json.loads(response_agent["messages"][-1].content)
 
@@ -135,4 +123,4 @@ def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session
 
     except Exception as e:
         print("Error in postMessage: ", str(e))
-        return HTTPException(status_code=400, detail="Error to post message.")
+        raise HTTPException(status_code=400, detail="Error to post message.")
