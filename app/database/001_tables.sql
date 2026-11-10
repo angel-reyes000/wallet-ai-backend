@@ -26,3 +26,14 @@ CREATE TABLE categories (
 	id SERIAL PRIMARY KEY,
 	category_name VARCHAR(30) NOT NULL
 );
+
+CREATE TABLE cards (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(30) NOT NULL,
+	type VARCHAR(30) NOT NULL,
+	number VARCHAR(4) NOT NULL,
+	expired_date DATE NOT NULL,
+	color VARCHAR(30) NOT NULL,
+	user_id INT NOT NULL,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);

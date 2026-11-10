@@ -22,4 +22,12 @@ class AgentReply (BaseModel):
     id: int = Field(descrition="Continue with the serial numbers or make the random number.")
     role: str = "ai"
     message: str = Field(description="Only contain your answer.")
-    
+
+class Card(BaseModel):
+    id: Optional[int] = None
+    name: str
+    type: str
+    last_numbers: str
+    expired_date: str
+    color: str
+    user_id: Optional[str] = None
