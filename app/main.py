@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers.categories import routerCategories
 from app.routers.types import routerTypes
 from app.routers.agent import routerAgent
+from app.routers.cards import routerCards
 
 load_dotenv()
 
@@ -32,3 +33,5 @@ app.include_router(routerTypes)
 app.include_router(routerTransactions)
 
 app.include_router(routerAgent)
+
+app.include_router(routerCards)
