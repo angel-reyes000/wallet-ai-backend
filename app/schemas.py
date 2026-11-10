@@ -29,5 +29,6 @@ class Card(BaseModel):
     type: str
     last_numbers: str
     expired_date: str
+    background_color: str
     color: str
     user_id: Optional[str] = None
