@@ -26,12 +26,3 @@ def get_chroma_client () -> ClientAPI:
     except Exception as e:
         print("Error to get client chroma db.")
         raise HTTPException(status_code=400, detail="Error to client chroma db.")
-
-vectorstore = Chroma(
-    client=get_chroma_client(),
-    collection_name="messages",
-    embedding_function=GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2",
-        api_key=os.getenv("API_GEMINI")
-    ),
-)

@@ -5,10 +5,9 @@ from sqlalchemy import text
 from app.routers.users import authUser
 from app.schemas import Message
 from langchain.chat_models import init_chat_model
-from app.agent.agents import general_agent
+from app.agent.agents import general_agent, ragAgent
 from langgraph_supervisor import create_supervisor
 from app.agent.agentConfig import model, temperature
-from app.vectorestore.chromaDB import vectorstore
 from app.agent.prompts import promptSupervisorAgent
 from uuid import uuid4
 from dotenv import load_dotenv
@@ -48,32 +47,6 @@ def getMessages (dataUser = Depends(authUser), db: Session = Depends(get_db)):
         print("Error in getMessages: ", str(e))
         return HTTPException(status_code=400, detail="Login again.")
 
-def add_text (dataMessage: Message):
-    vectorstore.add_texts(
-        texts=[dataMessage.text],
-        metadatas=[{"role": dataMessage.role}],
-        ids=[uuid4()]
-    )
-
-def search_text (dataMessage):
-    retriever = vectorstore.as_retriever(search_type="similarity",  search_kwargs={"k": 5})
-
-    response = retriever.invoke(dataMessage["message"])
-    print(response)
-    search_similarities = []
-
-    for doc in response:
-        print(doc)
-        search_similarities.append(doc.page_content)
-        print(doc.page_content)
-
-    if len(search_similarities) > 0:
-        return search_similarities
-    else:
-        if len(search_similarities) <= 1:
-            add_text()
-        return "There aren't similar context."
-
 @routerAgent.post("/postMessage")
 def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
@@ -85,7 +58,7 @@ def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session
 
         agent_supervisor = create_supervisor(
             model=llm,
-            agents=[general_agent],
+            agents=[general_agent, ragAgent],
             prompt=promptSupervisorAgent,
         )    
 

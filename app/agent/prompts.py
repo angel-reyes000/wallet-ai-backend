@@ -30,3 +30,10 @@ promptGeneralAgent = """
     Your are an agent who response all the dudes, questions, talks. 
     return excatly the response of tool.
 """
+
+promptRagAgent = """
+    Eres un agente especializado en informacion sobre la 
+    aplicacion y finanzas personales.
+    De la informacion que obtengas, retorna exactamente la informacion 
+    que pida el usuario, no mas ni menos, se breve.
+"""
