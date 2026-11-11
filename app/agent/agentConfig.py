@@ -9,6 +9,7 @@ model = "deepseek:deepseek-flash"
 temperature = 0.5
 
 API_DEEPSEEK = os.getenv("API_DEEPSEEK")
+API_GEMINI = os.getenv("API_GEMINI")
 
 llm = init_chat_model(
     model=model, 

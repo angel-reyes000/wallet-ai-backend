@@ -1,6 +1,10 @@
 from langchain.tools import tool
+from langchain_chroma import Chroma
 from langchain_core.runnables import RunnableConfig
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from sqlalchemy import text
+from app.vectorstore.chromaDB import get_chroma_client
+from app.agent.agentConfig import API_GEMINI
 
 @tool
 def memory_tool(config: RunnableConfig) :
@@ -73,3 +77,33 @@ def query_tool(query: str, config: RunnableConfig):
     data = response.mappings().all()
 
     return f"Query: \n {data}"
+
+@tool
+def rag_tool(text: str):
+    """
+        Recupera toda la informacion sobre la app, como funciona,
+        que es, para que usarla, como usarla, etc. 
+    """
+
+    vectorstore = Chroma(
+        client=get_chroma_client(),
+        embedding_function=GoogleGenerativeAIEmbeddings(
+            model="gemini-embedding-2",
+            api_key=API_GEMINI,
+        ),
+        collection_name="about_wallet_ai",
+    )
+
+    response = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+
+    result = response.invoke(text)
+
+    return result
+
+@tool
+def data_finance_tool(text:str):
+    """
+    Eres un experto en finanzas y finanzas personales, daras consejos,
+    retroalimentacion, motivacion, verdad y todo esto basado en finanzas.
+    """
+    return text
