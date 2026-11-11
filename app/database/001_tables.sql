@@ -31,9 +31,11 @@ CREATE TABLE cards (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(30) NOT NULL,
 	type VARCHAR(30) NOT NULL,
-	number VARCHAR(4) NOT NULL,
+	last_numbers VARCHAR(4) NOT NULL,
 	expired_date DATE NOT NULL,
+	background_color VARCHAR(30) NOT NULL,
 	color VARCHAR(30) NOT NULL,
 	user_id INT NOT NULL,
+	created_at DATE NOT NULL DEFAULT CURRENT_DATE,
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );
