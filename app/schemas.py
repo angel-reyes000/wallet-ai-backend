@@ -11,7 +11,7 @@ class Transaction (BaseModel):
     date: str
     description: str
     category: str
-    type: str
+    card: str
     amount: float
 
 class Message (BaseModel):

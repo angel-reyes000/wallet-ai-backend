@@ -176,14 +176,14 @@ def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(
         values = {}
         if (len(month) > 0 and len(year) > 0):
             query = """
-                SELECT id, category, type, amount FROM transactions
+                SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month
                 ORDER BY date ASC LIMIT 10;
             """
             values = {"user_id": user_id, "year": year, "month": month}
         elif (len(year) > 0):
             query = """
-                SELECT id, category, type, amount FROM transactions
+                SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year
                 ORDER BY date ASC LIMIT 10;
             """
@@ -192,7 +192,7 @@ def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(
             raise HTTPException(status_code=400, detail="Can not filter only to month.")
         else:
             query = """
-                SELECT id, category, type, amount FROM transactions
+                SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id
                 ORDER BY date ASC LIMIT 10;
             """
@@ -240,14 +240,14 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get data user.")
 
-        if not transaction.date or not transaction.description or not transaction.category or not transaction.type or not transaction.amount:
+        if not transaction.date or not transaction.description or not transaction.category or not transaction.card or not transaction.amount:
             raise HTTPException(status_code=400, detail="Invalid or missing data.")
 
         user_id = dataUser["id"]
 
         query = """
-            INSERT INTO transactions (date, description, category, type, amount, user_id)
-            VALUES (:date, :description, :category, :type, :amount, :user_id)
+            INSERT INTO transactions (date, description, category, card, amount, user_id)
+            VALUES (:date, :description, :category, :card, :amount, :user_id)
             RETURNING *;
         """
 
@@ -255,7 +255,7 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
             "date": transaction.date,
             "description": transaction.description,
             "category": transaction.category,
-            "type": transaction.type,
+            "card": transaction.card,
             "amount": transaction.amount,
             "user_id": user_id, 
         }
@@ -281,7 +281,7 @@ def updateTransaction(transaction: Transaction, dataUser = Depends(authUser), db
 
         query = """
             UPDATE transactions 
-            SET date = :date, description = :description, category = :category, type = :type, amount = :amount
+            SET date = :date, description = :description, category = :category, card = :card, amount = :amount
             WHERE id = :id 
             RETURNING *;
         """
@@ -290,7 +290,7 @@ def updateTransaction(transaction: Transaction, dataUser = Depends(authUser), db
             "date": transaction.date,
             "description": transaction.description,
             "category": transaction.category,
-            "type": transaction.type,
+            "card": transaction.card,
             "amount": transaction.amount,
             "id": transaction.id,
         }

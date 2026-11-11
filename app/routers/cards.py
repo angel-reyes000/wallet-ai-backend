@@ -11,6 +11,7 @@ routerCards = APIRouter(prefix="/cards", tags=["cards"])
 def getCards(dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
 
+        print("DATAUSER", dataUser)
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error al obtener datos de usuario.")
 
@@ -28,6 +29,7 @@ def getCards(dataUser = Depends(authUser), db: Session = Depends(get_db)):
         return data
 
     except Exception as e:
+        print("DATAUSER", dataUser)
         print("Error in getCards: ", str(e))
         raise HTTPException(status_code=400, detail="Error to get cards.")
 
