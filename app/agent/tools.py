@@ -7,33 +7,11 @@ from app.vectorstore.chromaDB import get_chroma_client
 from app.agent.agentConfig import API_GEMINI
 
 @tool
-def memory_tool(config: RunnableConfig) :
-    """
-        memory_tool:
-        Recupera el contexto de la conversacion, usalo siempre en 
-        cada mensaje para poder responderle al usuario.
-    """
-
-    user_id = config["configurable"]["user_id"]
-    db = config["configurable"]["db"]
-
-    query = """SELECT * FROM messages WHERE user_id = :user_id"""
-
-    value = {"user_id": user_id}
-
-    response = db.execute(text(query), value)
-
-    data = response.mappings().all()
-
-    return f"This is the context chat: \n{data}"
-
-@tool
 def query_tool(query: str, config: RunnableConfig):
     """
         query_tool:
-        Crea consultas en base a lo que te pida el usuario
-        cuando el usuario te pida consultar sus datos basandote
-        en las tablas.
+        Crea consultas a la base de datos de lo que te pida el usuario
+        cuando te pida consultar sus datos.
 
         Tables:
             CREATE TABLE users (
@@ -49,9 +27,22 @@ def query_tool(query: str, config: RunnableConfig):
                 date DATE NOT NULL,
                 description TEXT NOT NULL,
                 category VARCHAR(30) NOT NULL,
-                type VARCHAR(30) NOT NULL,
+                card VARCHAR(30) NOT NULL,
                 amount DECIMAL(9, 2) NOT NULL,
                 user_id INTEGER NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE cards (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(30) NOT NULL,
+                type VARCHAR(30) NOT NULL,
+                last_numbers VARCHAR(4) NOT NULL,
+                expired_date DATE NOT NULL,
+                background_color VARCHAR(30) NOT NULL,
+                color VARCHAR(30) NOT NULL,
+                user_id INT NOT NULL,
+                created_at DATE NOT NULL DEFAULT CURRENT_DATE,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
 
@@ -62,6 +53,7 @@ def query_tool(query: str, config: RunnableConfig):
             - Las consultas parametrizadas deben llevar = ':user_id' porque usamos FastAPI.
             - Solamente puedes realizar SELECT E INSERT y nada mas.
             - Si haras un 'INSERT' agrega 'RETURNING *' al final.
+            - Los datos del usuario se consultan con WHERE id = :user_id
 
         - No hagas preguntas, simplemente realiza lo que se te pide.
         - No respondas otra cosa mas que con un query para realizar lo que se te pide.
@@ -75,6 +67,8 @@ def query_tool(query: str, config: RunnableConfig):
     response = db.execute(text(query), value)
 
     data = response.mappings().all()
+
+    print("CONSULTAAAAAAAAAAAAAAAA: ", data)
 
     return f"Query: \n {data}"
 

@@ -19,9 +19,8 @@ class Message (BaseModel):
     message: str
 
 class AgentReply (BaseModel):
-    id: int = Field(descrition="Continue with the serial numbers or make the random number.")
     role: str = "ai"
-    message: str = Field(description="Only contain your answer.")
+    message: str = Field(description="Only contain the all answer.")
 
 class Card(BaseModel):
     id: Optional[int] = None
