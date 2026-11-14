@@ -32,7 +32,11 @@ def getMessages (dataUser = Depends(authUser), db: Session = Depends(get_db)):
 
         user_id = dataUser["id"]
 
-        query = """SELECT * FROM messages WHERE user_id = :id"""
+        query = """
+            SELECT * FROM messages WHERE user_id = :id 
+            ORDER BY id ASC
+            LIMIT 50
+        """
 
         value = {"id": user_id}
 
@@ -55,7 +59,12 @@ def getHistory (dataUser, db):
 
         user_id = dataUser["id"]
 
-        query = """SELECT role, message AS content FROM messages WHERE user_id = :id"""
+        query = """
+            SELECT role, message AS content FROM messages 
+            WHERE user_id = :id 
+            ORDER BY id ASC
+            LIMIT 50
+        """
 
         value = {"id": user_id}
 

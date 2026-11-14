@@ -178,14 +178,14 @@ def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(
             query = """
                 SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month
-                ORDER BY date ASC LIMIT 10;
+                ORDER BY date DESC LIMIT 10;
             """
             values = {"user_id": user_id, "year": year, "month": month}
         elif (len(year) > 0):
             query = """
                 SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id AND EXTRACT(YEAR FROM date) = :year
-                ORDER BY date ASC LIMIT 10;
+                ORDER BY date DESC LIMIT 10;
             """
             values = {"user_id": user_id, "year": year}
         elif (len(month) > 0):
@@ -194,7 +194,7 @@ def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(
             query = """
                 SELECT id, category, card, amount FROM transactions
                 WHERE user_id = :user_id
-                ORDER BY date ASC LIMIT 10;
+                ORDER BY date DESC LIMIT 10;
             """
             values = {"user_id": user_id}
 
@@ -218,14 +218,24 @@ def getTransactions (dataUser = Depends(authUser), db: Session = Depends(get_db)
 
         user_id = dataUser["id"]
 
-        query = "SELECT * FROM transactions WHERE user_id = :user_id"
+        query = """SELECT
+                   t.id, 
+                   t.date,
+                   t.description,
+                   t.category,
+                   t.card, 
+                   t.amount,
+                   c.type
+                   FROM transactions t 
+                   LEFT JOIN cards c ON t.card = c.name
+                   WHERE t.user_id = :user_id"""
 
         value = {"user_id": user_id}
 
         response = db.execute(text(query), value)
 
         data = response.mappings().all()
-        #print(data)
+        print(data)
 
         return data
 
