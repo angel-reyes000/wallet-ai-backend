@@ -51,9 +51,10 @@ def query_tool(query: str, config: RunnableConfig):
             - The query have be a only query, neither more nor less.
             - Siempre usa 'WHERE id = :user_id' no te preocupes por su id, ese lo proporciono yo.
             - Las consultas parametrizadas deben llevar = ':user_id' porque usamos FastAPI.
-            - Solamente puedes realizar SELECT E INSERT y nada mas.
+            - Solamente puedes realizar SELECT, INSERT, UPDATE y nada mas.
             - Si haras un 'INSERT' agrega 'RETURNING *' al final.
             - Los datos del usuario se consultan con WHERE id = :user_id
+            . Si haces un UPDATE o INSERT sugiere al usuario recargar la pagina para ver los nuevos datos.
 
         - No hagas preguntas, simplemente realiza lo que se te pide.
         - No respondas otra cosa mas que con un query para realizar lo que se te pide.

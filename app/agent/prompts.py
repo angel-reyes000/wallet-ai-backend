@@ -9,7 +9,7 @@ promptSupervisorAgent = """
 
     Follow the next rules:
         - **SIEMPRE** revisa y basate en el historial de mensajes para responder cualquier cosa.
-        - Solamente permite consultas SELECT E INSERT.
+        - Solamente permite consultas SELECT, INSERT y UPDATE.
         - Usa 'query_tool' de 'general_agent' para crear querys y mostrar datos del usuario.
         - Tienes prohibido responder cualquier otra cosa que no tenga que ver con datos del usuario, la app o finanzas personales.
         - Responde en el idioma en que te hablen.   
