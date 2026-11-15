@@ -10,7 +10,7 @@ from app.routers.users import authUser
 from app.schemas import Message
 from app.schemas import AgentReply
 from langchain.chat_models import init_chat_model
-from app.agent.agents import general_agent, ragAgent
+from app.agent.agents import general_agent, ragAgent, webAgent
 from langgraph_supervisor import create_supervisor
 from app.agent.agentConfig import model, temperature
 from app.routers.settings import getUserSettings
@@ -105,7 +105,7 @@ def postMessage (dataMessage: Message, dataUser = Depends(authUser), db: Session
 
         agent_supervisor = create_supervisor(
             model=buildLlm(getUserSettings(db, user_id)["temperature"]),
-            agents=[general_agent, ragAgent],
+            agents=[general_agent, ragAgent, webAgent],
             prompt=promptSupervisorAgent,
             response_format=AgentReply,
         )    
@@ -168,9 +168,9 @@ def stream_agent (history, message: str, user_id, db):
     """Yields ("token", text) while the supervisor answers and ("final", text) at the end."""
     agent_supervisor = create_supervisor(
         model=buildLlm(getUserSettings(db, user_id)["temperature"]),
-        agents=[general_agent, ragAgent],
+        agents=[general_agent, ragAgent, webAgent],
         prompt=promptSupervisorAgent,
-    )
+    ) 
 
     compiled_agent = agent_supervisor.compile()
 

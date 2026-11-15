@@ -3,8 +3,10 @@ from langchain_chroma import Chroma
 from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from sqlalchemy import text
+from langchain_tavily import TavilySearch
 from app.vectorstore.chromaDB import get_chroma_client
 from app.agent.agentConfig import API_GEMINI
+from app.agent.agentConfig import API_TAVILY
 
 @tool
 def query_tool(query: str, config: RunnableConfig):
@@ -102,3 +104,27 @@ def data_finance_tool(text:str):
     retroalimentacion, motivacion, verdad y todo esto basado en finanzas.
     """
     return text
+
+@tool
+def search_web(text: str):
+    """
+    Buscaras informacion web para responder al usuario cualquier
+    cosa que necesite buscarse por internet.
+    Siempre considera buscar en Google en tus investigaciones.
+    """
+    try:
+        web_search = TavilySearch(
+            max_results=3,
+            topic="finance",
+            time_range="week",
+            tavily_api_key=API_TAVILY,
+        )
+
+        response = web_search.invoke({"query": text})
+        print(response)
+        return response
+    
+    except Exception as e:
+        print("ERROR WEB: ", str(e))
+
+    
