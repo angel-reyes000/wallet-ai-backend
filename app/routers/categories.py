@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database.db import get_db
 from sqlalchemy import text
 from app.routers.users import authUser
+from app.validation import period_filters
 
 routerCategories = APIRouter(prefix="/categories")
 
@@ -19,19 +20,23 @@ def getCategories(db: Session = Depends(get_db)):
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getCategories: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get categories.")
+        raise HTTPException(status_code=400, detail="Error to get categories.")
 
 #[{"name": "algo", "value": 2000}]
 @routerCategories.get("/getGraphicCategories")
-def getGraphicCategories (month: str, year: str, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+def getGraphicCategories (period = Depends(period_filters), dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
 
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get total to categories.")
 
         user_id = dataUser["id"]
+        month, year = period
 
         query = ""
         values = {}
@@ -70,7 +75,10 @@ def getGraphicCategories (month: str, year: str, dataUser = Depends(authUser), d
 
         return data 
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getTotalToCategory: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get total to categories.")
+        raise HTTPException(status_code=400, detail="Error to get total to categories.")
        

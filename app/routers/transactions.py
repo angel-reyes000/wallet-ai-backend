@@ -1,22 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.routers.users import authUser
 from app.database.db import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.schemas import Transaction
+from app.validation import period_filters
 import calendar
 from datetime import datetime
 
 routerTransactions = APIRouter(prefix="/transactions", tags=["transaction"])
 
 @routerTransactions.get("/getGraphicTransactions")
-def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+def getGraphicTransactions(period = Depends(period_filters), dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try: 
 
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get data user.")
 
         user_id = dataUser["id"]
+        month, year = period
 
         query = ""
         values = {}
@@ -99,17 +101,21 @@ def getGraphicTransactions(month: str = None, year: str = None, dataUser = Depen
 
         return [listDataValues, dataLabelX]
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getGraphicTransactions: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get filters.")
+        raise HTTPException(status_code=400, detail="Error to get filters.")
 
 @routerTransactions.get("/getTotalBalancesExpensesIncomes")
-def getTotalBalancesExpensesIncomes(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+def getTotalBalancesExpensesIncomes(period = Depends(period_filters), dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get data user.")
 
         user_id = dataUser["id"]
+        month, year = period
         
         query = ""
         if (len(month) > 0 and len(year) > 0):
@@ -159,18 +165,22 @@ def getTotalBalancesExpensesIncomes(month: str = None, year: str = None, dataUse
 
         return data
         
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getTotalBalancesExpensesIncomes: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get filters.")
+        raise HTTPException(status_code=400, detail="Error to get filters.")
 
 @routerTransactions.get("/getLastTransactions")
-def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+def getLastTransactions(period = Depends(period_filters), dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try: 
 
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get data user.")
 
         user_id = dataUser["id"]
+        month, year = period
 
         query = ""
         values = {}
@@ -205,9 +215,12 @@ def getLastTransactions(month: str = None, year: str = None, dataUser = Depends(
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getGraphicTransactions: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get filters.")
+        raise HTTPException(status_code=400, detail="Error to get filters.")
 
 @routerTransactions.get("/getTransactions")
 def getTransactions (dataUser = Depends(authUser), db: Session = Depends(get_db)):
@@ -239,9 +252,31 @@ def getTransactions (dataUser = Depends(authUser), db: Session = Depends(get_db)
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         print("Error in getTransactions: ", str(e))
-        return HTTPException(status_code=400, detail="Error to get transactions.")
+        raise HTTPException(status_code=400, detail="Error to get transactions.")
+
+def validateTransactionReferences (db: Session, user_id: int, transaction: Transaction):
+    """The category must exist and the card must be 'Cash' or one of the user's own cards."""
+    category = db.execute(
+        text("SELECT 1 FROM categories WHERE category_name = :category"),
+        {"category": transaction.category}
+    ).first()
+
+    if not category:
+        raise HTTPException(status_code=400, detail="Invalid category.")
+
+    if transaction.card != "Cash":
+        card = db.execute(
+            text("SELECT 1 FROM cards WHERE user_id = :user_id AND name = :card"),
+            {"user_id": user_id, "card": transaction.card}
+        ).first()
+
+        if not card:
+            raise HTTPException(status_code=400, detail="Invalid card.")
 
 @routerTransactions.post("/postTransaction")
 def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db: Session = Depends(get_db)):
@@ -250,10 +285,10 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to get data user.")
 
-        if not transaction.date or not transaction.description or not transaction.category or not transaction.card or not transaction.amount:
-            raise HTTPException(status_code=400, detail="Invalid or missing data.")
-
         user_id = dataUser["id"]
+
+        # date, description, category, card and amount were already validated by the schema
+        validateTransactionReferences(db, user_id, transaction)
 
         query = """
             INSERT INTO transactions (date, description, category, card, amount, user_id)
@@ -267,7 +302,7 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
             "category": transaction.category,
             "card": transaction.card,
             "amount": transaction.amount,
-            "user_id": user_id, 
+            "user_id": user_id,
         }
 
         response = db.execute(text(query), values)
@@ -278,7 +313,11 @@ def postTransaction (transaction: Transaction, dataUser = Depends(authUser), db:
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
+        db.rollback()
         print("Error in postTransactions: ", str(e))
         raise HTTPException(status_code=400, detail="Error to create transaction.")
 
@@ -289,54 +328,85 @@ def updateTransaction(transaction: Transaction, dataUser = Depends(authUser), db
         if not dataUser:
             raise HTTPException(status_code=400, detail="Error to update data.")
 
+        if not transaction.id:
+            raise HTTPException(status_code=400, detail="Missing transaction id.")
+
+        user_id = dataUser["id"]
+
+        validateTransactionReferences(db, user_id, transaction)
+
+        # user_id in the WHERE: a user can only edit their own transactions
         query = """
-            UPDATE transactions 
+            UPDATE transactions
             SET date = :date, description = :description, category = :category, card = :card, amount = :amount
-            WHERE id = :id 
+            WHERE id = :id AND user_id = :user_id
             RETURNING *;
         """
 
-        values = {            
+        values = {
             "date": transaction.date,
             "description": transaction.description,
             "category": transaction.category,
             "card": transaction.card,
             "amount": transaction.amount,
             "id": transaction.id,
+            "user_id": user_id,
         }
 
         response = db.execute(text(query), values)
-        db.commit()
 
         data = response.mappings().first()
+
+        if not data:
+            db.rollback()
+            raise HTTPException(status_code=404, detail="Transaction not found.")
+
+        db.commit()
         #print("UPDATE DATA: ", data)
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
+        db.rollback()
         print("Error in updateTransactions: ", str(e))
         raise HTTPException(status_code=400, detail="Error to update transaction.")
-    
+
 @routerTransactions.delete("/deleteTransaction")
-def deleteTransaction (transaction_id: int, db: Session = Depends(get_db)):
+def deleteTransaction (transaction_id: int = Query(gt=0), dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
 
+        # this endpoint had no authentication and deleted by id only
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error to delete data.")
+
         query = """
-            DELETE FROM transactions 
-            WHERE id = :id
+            DELETE FROM transactions
+            WHERE id = :id AND user_id = :user_id
             RETURNING *;
         """
 
-        value = {"id": transaction_id}
+        value = {"id": transaction_id, "user_id": dataUser["id"]}
 
         response = db.execute(text(query), value)
-        db.commit()
 
         data = response.mappings().first()
+
+        if not data:
+            db.rollback()
+            raise HTTPException(status_code=404, detail="Transaction not found.")
+
+        db.commit()
         #print(data)
 
         return data
 
+    except HTTPException:
+        raise
+
     except Exception as e:
+        db.rollback()
         print("Error in deleteTransactions: ", str(e))
         raise HTTPException(status_code=400, detail="Error to delete transaction.")

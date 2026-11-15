@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from sqlalchemy import text
-from app.schemas import User
+from app.schemas import User, LoginUser
 import bcrypt
 import jwt
 from dotenv import load_dotenv
@@ -14,28 +14,13 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 routerUsers = APIRouter(prefix="/users", tags=["users"])
 
-@routerUsers.get("/getUsers")
-def getUsers(db: Session = Depends(get_db)):
-    try:
-
-        query = "SELECT * FROM users"
-
-        response = db.execute(text(query))
-
-        data = response.mappings().all()
-
-        return data
-
-    except Exception as e:
-        print(f"Error in getUsers: {str(e)}")
-        return {"message": "Error in getUsers."}
-
 @routerUsers.post("/postUser")
 def postUser(user: User, db: Session = Depends(get_db)):
 
     try:
 
-        queryCheckEmail = "SELECT email FROM users WHERE email = :email"
+        # user.username / email / password were already validated and cleaned by the schema.
+        queryCheckEmail = "SELECT email FROM users WHERE LOWER(email) = LOWER(:email)"
 
         emailValue = {"email": user.email}
 
@@ -43,17 +28,8 @@ def postUser(user: User, db: Session = Depends(get_db)):
 
         existEmail = responseEmail.mappings().all()
 
-        if not user.username:
-            return {"message": "Invalid username."}
-        
-        elif not user.email:
-            return {"message": "Invalid email."}
-
-        elif len(existEmail) >= 1:
+        if len(existEmail) >= 1:
             return {"message": "Already email exists."}
-        
-        elif len(user.password) < 8 or not user.password:
-            return {"message": "Invalid password."}        
 
         query = """INSERT INTO users (username, email, password)
                    VALUES (:username, :email, :password)
@@ -73,16 +49,18 @@ def postUser(user: User, db: Session = Depends(get_db)):
         return {}
 
     except Exception as e:
+        db.rollback()
         print(f"Error in postUsers: {str(e)}")
         return {"message": "Error at create account."}
 
 def authUser (authorization: str = Header()):
     try:
 
-        token = authorization.removeprefix("Bearer ")
+        token = authorization.removeprefix("Bearer ").strip()
 
-        if not token: 
-            return {"message": "Access denegade: Invalid token"}
+        if not token:
+            # falsy like every other auth failure: the endpoints answer "Session expired"
+            return False
 
         return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
 
@@ -95,6 +73,27 @@ def authUser (authorization: str = Header()):
         print(f"Error in authUsers: {str(e)}")
         return False
         #{"message": "Error in authUsers."}
+
+@routerUsers.get("/getUsers")
+def getUsers(dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    # This endpoint used to list every user, password hashes included, without a token.
+    try:
+
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Session expired.")
+
+        query = "SELECT id, username, email, created_at FROM users WHERE id = :id"
+
+        response = db.execute(text(query), {"id": dataUser["id"]})
+
+        return response.mappings().all()
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"Error in getUsers: {str(e)}")
+        raise HTTPException(status_code=400, detail="Error in getUsers.")
 
 @routerUsers.get("/getDataUser")
 def getDataUser(dataUser = Depends(authUser), db: Session = Depends(get_db)):
@@ -119,13 +118,10 @@ def getDataUser(dataUser = Depends(authUser), db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Error to get data.")
 
 @routerUsers.post('/verifyUser')
-def verifyUser (user: User, db: Session = Depends(get_db)):
+def verifyUser (user: LoginUser, db: Session = Depends(get_db)):
     try:
 
-        if not user.email or not user.password:
-            return {"message": "Invalid data."}
-
-        query = "SELECT * FROM users WHERE email = :email"
+        query = "SELECT * FROM users WHERE LOWER(email) = LOWER(:email)"
 
         value = {"email": user.email}
 
@@ -147,7 +143,7 @@ def verifyUser (user: User, db: Session = Depends(get_db)):
         dataUser["created_at"] = str(dataUser["created_at"])
 
         payload = dataUser
-        payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1) 
+        payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1)
 
         token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
         print(token)
