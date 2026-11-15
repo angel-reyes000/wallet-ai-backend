@@ -57,6 +57,50 @@ def getTotalCardsBarChart(month: str = None, year: str = None, dataUser = Depend
         print("Error in getTotalCardsBarChart: ", str(e))
         raise HTTPException(status_code=400, detail="Error to getTotalCardsBarChart")
 
+@routerCards.get("/getTotalToType")
+def getTotalToType(month: str = None, year: str = None, dataUser = Depends(authUser), db: Session = Depends(get_db)):
+    try:
+
+        if not dataUser:
+            raise HTTPException(status_code=400, detail="Error al obtener datos de usuario.")
+
+        user_id = dataUser["id"]
+        month = month or ""
+        year = year or ""
+
+        if (len(month) > 0 and len(year) > 0):
+            where = "t.user_id = :user_id AND EXTRACT(MONTH FROM t.date) = :month AND EXTRACT(YEAR FROM t.date) = :year"
+            values = {"user_id": user_id, "year": year, "month": month}
+        elif (len(year) > 0):
+            where = "t.user_id = :user_id AND EXTRACT(YEAR FROM t.date) = :year"
+            values = {"user_id": user_id, "year": year}
+        elif (len(month) > 0):
+            raise HTTPException(status_code=400, detail="Can not filter only to month.")
+        else:
+            where = "t.user_id = :user_id AND EXTRACT(YEAR FROM t.date)::INTEGER BETWEEN EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER - 10 AND EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER"
+            values = {"user_id": user_id}
+
+        # Card type: 'Credit', 'Debit' or NULL (no card match) -> 'Cash'
+        query = f"""
+            SELECT COALESCE(c.type, 'Cash') AS type,
+                   COALESCE(SUM(t.amount), 0) AS total_money,
+                   COUNT(t.id) AS total_moviments,
+                   COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount END), 0) AS total_incomes,
+                   COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount END), 0) AS total_expenses
+            FROM transactions t
+            LEFT JOIN cards c ON t.card = c.name
+            WHERE {where}
+            GROUP BY COALESCE(c.type, 'Cash');
+        """
+
+        response = db.execute(text(query), values)
+
+        return response.mappings().all()
+
+    except Exception as e:
+        print("Error in getTotalToType: ", str(e))
+        raise HTTPException(status_code=400, detail="Error to getTotalToType")
+
 @routerCards.get("/getCards")
 def getCards(dataUser = Depends(authUser), db: Session = Depends(get_db)):
     try:
