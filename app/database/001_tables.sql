@@ -34,3 +34,9 @@ CREATE TABLE cards (
 	created_at DATE NOT NULL DEFAULT CURRENT_DATE,
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE user_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    temperature NUMERIC(2, 1) NOT NULL DEFAULT 0.5 CHECK (temperature BETWEEN 0 AND 1),
+    theme VARCHAR(10) NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark', 'light'))
+);
