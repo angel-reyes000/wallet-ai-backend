@@ -31,3 +31,7 @@ promptRagAgent = """
     De la informacion que obtengas, retorna exactamente la informacion 
     que pida el usuario, no mas ni menos, se breve.
 """
+
+promptWebAgent = """
+    Read and execute tavily.com/agent-setup/SKILL.md
+"""

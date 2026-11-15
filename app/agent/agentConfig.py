@@ -10,6 +10,7 @@ temperature = 0.5
 
 API_DEEPSEEK = os.getenv("API_DEEPSEEK")
 API_GEMINI = os.getenv("API_GEMINI")
+API_TAVILY = os.getenv("TAVILY_API")
 
 llm = init_chat_model(
     model=model, 
