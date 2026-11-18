@@ -11,7 +11,7 @@ USER_DB=os.getenv("USER_DB")
 PASSWORD_DB=os.getenv("PASSWORD_DB")
 NAME_DB=os.getenv("NAME_DB")
 
-URL_DB = "postgresql+psycopg2://postgres:dokirey1@localhost:5432/wallet-ai"
+URL_DB = f"postgresql+psycopg2://{USER_DB}:{PASSWORD_DB}@{HOST_DB}:{PORT_DB}/{NAME_DB}"
 
 engine = create_engine(URL_DB)
 
