@@ -22,6 +22,13 @@ CREATE TABLE categories (
 	category_name VARCHAR(30) NOT NULL
 );
 
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    role VARCHAR(5) NOT NULL,
+    message TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id)
+);
+
 CREATE TABLE cards (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(30) NOT NULL,
